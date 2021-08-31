@@ -1,0 +1,9 @@
+[package]
+name = "server"
+version = "0.1.0"
+authors = ["MrTimscampi <julien.machiels@protonmail.com>"]
+edition = "2018"
+description = "Server application for the Meiti media server"
+license = "MPL-2.0"
+
+[dependencies]
