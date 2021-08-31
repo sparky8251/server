@@ -7,3 +7,6 @@ description = "Server application for the Meiti media server"
 license = "MPL-2.0"
 
 [dependencies]
+actix-web = "3.3.2"
+diesel = "1.4.7"
+juniper = "0.15.7"
