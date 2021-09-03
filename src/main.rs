@@ -1,8 +1,24 @@
+mod config;
 
+use std::fs;
+use std::io;
+use clap::{AppSettings, Clap};
+use serde::{Deserialize};
+use figment::{Figment, providers::{Serialized}};
 use fern::colors::{Color, ColoredLevelConfig};
-use actix_web::{get, App, HttpServer, Responder, HttpResponse};
 
-fn setup_logger() -> Result<(), fern::InitError> {
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
+#[derive(Clap, Deserialize, serde::Serialize)]
+#[clap(name = "Meiti Media Server",version = VERSION)]
+#[clap(setting = AppSettings::ColoredHelp)]
+struct Opts {
+    #[clap(short, long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    port: Option<u16>
+}
+
+fn setup_logger(config: &config::Config) -> Result<(), fern::InitError> {
     let colors_level = ColoredLevelConfig::new()
         .error(Color::Red)
         .warn(Color::Yellow)
@@ -36,30 +52,34 @@ fn setup_logger() -> Result<(), fern::InitError> {
                         message
                     ))
                 })
-                .chain(fern::DateBased::new("meiti.server.", "%Y-%m-%d.log"))
+                .chain(fern::DateBased::new(config.log_file_path.join("meiti.server."), "%Y-%m-%d.log"))
             )
         .apply()?;
     Ok(())
 }
 
-#[get("/healh")]
-async fn health() -> impl Responder {
-    HttpResponse::Ok()
+fn ensure_config_dirs(config: &config::Config) -> std::io::Result<()> {
+    fs::create_dir_all(&config.log_file_path)?;
+
+    return Ok(());
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+fn main() {
+    let opts: Opts = Opts::parse();
 
-    setup_logger().expect("failed to initialize logging.");
+    let figment = Figment::from(Serialized::defaults(config::Config::default()))
+        .merge(Serialized::defaults(opts));
+
+    let config = figment.extract::<config::Config>().expect("The provided configuration is invalid");
+
+    // Ensure the directories we need exist before going further.
+    ensure_config_dirs(&config).expect("Unable to create some directories");
+
+    setup_logger(&config).expect("failed to initialize logging");
 
     log::info!("Meiti Media Server v{}", VERSION);
+    log::info!("Using port {:?}", config.port);
+    log::info!("Using log path {:?}", config.log_file_path);
 
-    HttpServer::new(|| {
-        App::new()
-            .service(health)
-    })
-    .bind("127.0.0.1:23400")?
-    .run()
-    .await
+    log::info!("Shutting down...");
 }
