@@ -723,6 +723,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cb00336871be5ed2c8ed44b60ae9959dc5b9f08539422ed43f09e34ecaeba21"
 
 [[package]]
+name = "libloading"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f84d96438c15fcd6c3f244c8fce01d1e2b9c6b5623e9c711dc9286d8fc92d6a"
+dependencies = [
+ "cfg-if",
+ "winapi",
+]
+
+[[package]]
 name = "libsqlite3-sys"
 version = "0.22.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -774,6 +784,10 @@ name = "matches"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
+
+[[package]]
+name = "meiti-common"
+version = "0.1.0"
 
 [[package]]
 name = "memchr"
@@ -1325,8 +1339,11 @@ dependencies = [
  "directories",
  "fern",
  "figment",
+ "glob",
  "juniper",
+ "libloading",
  "log",
+ "meiti-common",
  "rocket",
  "serde",
 ]

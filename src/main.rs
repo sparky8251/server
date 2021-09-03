@@ -1,7 +1,7 @@
 mod config;
+mod plugins;
 
 use std::fs;
-use std::io;
 use clap::{AppSettings, Clap};
 use serde::{Deserialize};
 use figment::{Figment, providers::{Serialized}};
@@ -32,9 +32,8 @@ fn setup_logger(config: &config::Config) -> Result<(), fern::InitError> {
             fern::Dispatch::new()
                 .format(move |out, message, record| {
                     out.finish(format_args!(
-                        "[{}][{}][{}] {}",
+                        "[{}][{}] {}",
                         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                        record.target(),
                         colors_level.color(record.level()),
                         message
                     ))
@@ -45,9 +44,8 @@ fn setup_logger(config: &config::Config) -> Result<(), fern::InitError> {
             fern::Dispatch::new()
                 .format(move |out, message, record| {
                     out.finish(format_args!(
-                        "[{}][{}][{}] {}",
+                        "[{}][{}] {}",
                         chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                        record.target(),
                         record.level(),
                         message
                     ))
@@ -60,6 +58,7 @@ fn setup_logger(config: &config::Config) -> Result<(), fern::InitError> {
 
 fn ensure_config_dirs(config: &config::Config) -> std::io::Result<()> {
     fs::create_dir_all(&config.log_file_path)?;
+    fs::create_dir_all(&config.plugins_file_path)?;
 
     return Ok(());
 }
@@ -70,16 +69,27 @@ fn main() {
     let figment = Figment::from(Serialized::defaults(config::Config::default()))
         .merge(Serialized::defaults(opts));
 
-    let config = figment.extract::<config::Config>().expect("The provided configuration is invalid");
+    let config: config::Config = figment.extract::<config::Config>().expect("The provided configuration is invalid");
 
     // Ensure the directories we need exist before going further.
-    ensure_config_dirs(&config).expect("Unable to create some directories");
+    ensure_config_dirs(&config).expect("Unable to create required directories");
 
     setup_logger(&config).expect("failed to initialize logging");
 
     log::info!("Meiti Media Server v{}", VERSION);
     log::info!("Using port {:?}", config.port);
     log::info!("Using log path {:?}", config.log_file_path);
+    log::info!("Using plugins path {:?}", config.plugins_file_path);
 
-    log::info!("Shutting down...");
+    let mut plugin_manager = plugins::PluginManager::new();
+
+    for entry in fs::read_dir(config.plugins_file_path).unwrap() {
+        if let Ok(path) = entry {
+                unsafe {
+                    plugin_manager.load_plugin(path.path()).expect("Failed to load plugin");
+                }
+            }
+        }
+
+    log::info!("Shutting down the server");
 }
