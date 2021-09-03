@@ -31,7 +31,7 @@ impl PluginManager {
         let boxed_raw = constructor();
 
         let plugin = Box::from_raw(boxed_raw);
-        log::info!("Loaded plugin: {}", plugin.name());
+        log::info!("Loaded {} plugin", plugin.name());
         plugin.on_plugin_load();
         self.plugins.push(plugin);
 
@@ -43,13 +43,24 @@ impl PluginManager {
         log::info!("Unloading plugins");
 
         for plugin in self.plugins.drain(..) {
-            log::trace!("Firing on_plugin_unload for {:?}", plugin.name());
+            log::info!("Running unload hooks for plugin {}", plugin.name());
             plugin.on_plugin_unload();
         }
 
         for lib in self.loaded_libraries.drain(..) {
             drop(lib);
         }
+    }
+
+    pub fn register_routes(&mut self) -> Vec<rocket::Route> {
+        let mut routes: Vec<rocket::Route> = vec![];
+
+        for plugin in self.plugins.drain(..) {
+            log::info!("Registering routes for {}", plugin.name());
+            routes.append(&mut plugin.register_routes());
+        }
+
+        return routes;
     }
 }
 

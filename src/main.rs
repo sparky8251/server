@@ -1,3 +1,5 @@
+#[macro_use] extern crate rocket;
+
 mod config;
 mod plugins;
 
@@ -6,6 +8,7 @@ use clap::{AppSettings, Clap};
 use serde::{Deserialize};
 use figment::{Figment, providers::{Serialized}};
 use fern::colors::{Color, ColoredLevelConfig};
+use rocket::http::Status;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -63,7 +66,13 @@ fn ensure_config_dirs(config: &config::Config) -> std::io::Result<()> {
     return Ok(());
 }
 
-fn main() {
+#[get("/health")]
+fn health() -> Status {
+    Status::Accepted
+}
+
+#[rocket::main]
+async fn main() {
     let opts: Opts = Opts::parse();
 
     let figment = Figment::from(Serialized::defaults(config::Config::default()))
@@ -90,6 +99,14 @@ fn main() {
                 }
             }
         }
+
+    let routes = plugin_manager.register_routes();
+
+    let rocket = rocket::build()
+        .mount("/", routes![health])
+        .mount("/", routes);
+
+    rocket.launch().await.expect("Failed to launch the web server");
 
     log::info!("Shutting down the server");
 }
