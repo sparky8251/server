@@ -9,6 +9,7 @@ use serde::{Deserialize};
 use figment::{Figment, providers::{Serialized}};
 use fern::colors::{Color, ColoredLevelConfig};
 use rocket::http::Status;
+use rocket::fs::{FileServer};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -66,6 +67,11 @@ fn ensure_config_dirs(config: &config::Config) -> std::io::Result<()> {
     return Ok(());
 }
 
+#[get("/")]
+fn root_redirect() -> rocket::response::Redirect {
+    return rocket::response::Redirect::temporary("/web/");
+}
+
 #[get("/health")]
 fn health() -> Status {
     Status::Accepted
@@ -96,8 +102,16 @@ async fn main() {
         plugin_manager.load_all_plugins(&config).expect("Failed to load plugins");
     }
 
+    let web_resources_dir = plugin_manager.get_web_client_resources();
+
+    log::info!("Serving web client from {:?}", web_resources_dir.as_path());
+
     let rocket = rocket::build()
-        .mount("/", routes![health]);
+        .mount("/web/", FileServer::from(web_resources_dir.as_path()).rank(1))
+        .mount("/", routes![
+            root_redirect,
+            health
+        ]);
 
     rocket.launch().await.expect("Failed to launch the web server");
 

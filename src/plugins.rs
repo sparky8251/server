@@ -25,6 +25,14 @@ pub struct PluginManifest {
 
 pub struct LoadedPlugin {
     name: String,
+    version: Version,
+    scope: String,
+    summary: String,
+    description: String,
+    homepage: Url,
+    license: String,
+    source: Url,
+    resources: PathBuf,
     library: Option<Box<dyn Plugin>>
 }
 
@@ -97,8 +105,19 @@ impl PluginManager {
             plugin.on_plugin_load();
         }
 
+        let mut resources_dir = filename.clone();
+        resources_dir.push("resources");
+
         let loaded_plugin_info = LoadedPlugin {
             name: manifest.name,
+            version: manifest.version,
+            scope: manifest.scope,
+            summary: manifest.summary,
+            description: manifest.description,
+            homepage: manifest.homepage,
+            license: manifest.license,
+            source: manifest.source,
+            resources: resources_dir,
             library: plugin
         };
 
@@ -113,8 +132,8 @@ impl PluginManager {
         log::info!("Unloading plugins");
 
         for plugin in self.plugins.drain(..) {
-            log::info!("Running unload hooks for plugin {}", plugin.name);
             if plugin.library.is_some() {
+                log::info!("Running unload hooks for plugin {}", plugin.name);
                 plugin.library.unwrap().on_plugin_unload();
             }
         }
@@ -122,6 +141,14 @@ impl PluginManager {
         for lib in self.loaded_libraries.drain(..) {
             drop(lib);
         }
+    }
+
+    pub fn get_web_client_resources(&self) -> &std::path::PathBuf {
+        let web_plugin: Option<&LoadedPlugin> = self.plugins.iter().filter(|plugin| plugin.scope == "web").nth(0);
+
+        let web_directory = &web_plugin.expect("No web client plugin found").resources;
+
+        return web_directory;
     }
 }
 
