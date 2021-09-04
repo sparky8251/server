@@ -92,19 +92,12 @@ async fn main() {
 
     let mut plugin_manager = plugins::PluginManager::new();
 
-    for entry in fs::read_dir(config.plugins_file_path).unwrap() {
-        if let Ok(path) = entry {
-                unsafe {
-                    plugin_manager.load_plugin(path.path()).expect("Failed to load plugin");
-                }
-            }
-        }
-
-    let routes = plugin_manager.register_routes();
+    unsafe {
+        plugin_manager.load_all_plugins(&config).expect("Failed to load plugins");
+    }
 
     let rocket = rocket::build()
-        .mount("/", routes![health])
-        .mount("/", routes);
+        .mount("/", routes![health]);
 
     rocket.launch().await.expect("Failed to launch the web server");
 

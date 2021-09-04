@@ -30,3 +30,6 @@ glob = "0.3.0"
 libloading = "0.7.0"
 
 meiti-common = { path = "../meiti-common"}
+serde_json = "1.0.67"
+semver = { version = "1.0.4", features = ["serde"] }
+url = { version = "2.2.2", features = ["serde"] }
