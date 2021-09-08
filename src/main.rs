@@ -1,10 +1,12 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_migrations;
+#[macro_use] extern crate juniper;
 
 mod config;
 mod db;
 mod plugins;
+mod graphql;
 
 use std::fs;
 use clap::{AppSettings, Clap};
@@ -18,7 +20,7 @@ use rocket::figment::{value::{Map, Value}, util::map};
 use rocket_sync_db_pools::{database, diesel as rocket_diesel};
 
 #[database("meiti")]
-struct MeitiDb(rocket_diesel::SqliteConnection);
+pub struct MeitiDb(rocket_diesel::SqliteConnection);
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -81,23 +83,24 @@ fn graphiql() -> content::Html<String> {
     juniper_rocket::graphiql_source("/graphql", None)
 }
 
-/*#[rocket::get("/graphql?<request>")]
+
+#[rocket::get("/graphql?<request>")]
 fn get_graphql_handler(
     context: MeitiDb,
     request: juniper_rocket::GraphQLRequest,
-    schema: &State<Schema>,
+    schema: &State<graphql::schema::Schema>,
 ) -> juniper_rocket::GraphQLResponse {
     request.execute_sync(&*schema, &context)
 }
 
 #[rocket::post("/graphql", data = "<request>")]
-fn post_graphql_handler(
+fn post_graphql_handler<'a>(
     context: MeitiDb,
     request: juniper_rocket::GraphQLRequest,
-    schema: &State<Schema>,
+    schema: &State<graphql::schema::Schema>,
 ) -> juniper_rocket::GraphQLResponse {
     request.execute_sync(&*schema, &context)
-}*/
+}
 
 #[get("/")]
 fn root_redirect() -> rocket::response::Redirect {
@@ -162,11 +165,17 @@ async fn main() {
     let rocket = rocket::custom(rocket_figment)
         .attach(MeitiDb::fairing())
         .attach(rocket::fairing::AdHoc::on_ignite("Running database migrations", run_migrations))
+        .manage(
+            graphql::schema::Schema::new(
+                graphql::schema::Query,
+                juniper::EmptyMutation::<MeitiDb>::new(),
+                juniper::EmptySubscription::<MeitiDb>::new()
+        ))
         .mount("/web/", FileServer::from(web_resources_dir.as_path()).rank(1))
         .mount("/", routes![
             graphiql,
-            //get_graphql_handler,
-            //post_graphql_handler,
+            get_graphql_handler,
+            post_graphql_handler,
             root_redirect,
             health
         ]);
