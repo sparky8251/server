@@ -160,6 +160,16 @@ async fn main() {
     log::info!("Using log path {:?}", config.log_file_path);
     log::info!("Using plugins path {:?}", config.plugins_file_path);
 
+    // Only enable Sentry reporting if the user explicitely agreed to it
+    if config.sentry {
+        log::info!("Initializing Sentry for reporting crashes");
+
+        let _guard = sentry::init(("https://a191a66759744bc39e79c122ed69da3b@o725130.ingest.sentry.io/5948021", sentry::ClientOptions {
+            release: sentry::release_name!(),
+            ..Default::default()
+        }));
+    }
+
     let mut plugin_manager = plugins::PluginManager::new();
 
     unsafe {

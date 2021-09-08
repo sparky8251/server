@@ -9,7 +9,8 @@ pub struct Config {
     pub port: u16,
     pub log_file_path: PathBuf,
     pub plugins_file_path: PathBuf,
-    pub database_file_path: PathBuf
+    pub database_file_path: PathBuf,
+    pub sentry: bool
 }
 
 impl Default for Config {
@@ -32,6 +33,7 @@ impl Default for Config {
             log_file_path: log_file_path,
             plugins_file_path: plugins_file_path,
             database_file_path: database_file_path,
+            sentry: false
         }
     }
 }
