@@ -31,7 +31,7 @@ impl Default for Config {
             port: 23400,
             log_file_path: log_file_path,
             plugins_file_path: plugins_file_path,
-            database_file_path: database_file_path
+            database_file_path: database_file_path,
         }
     }
 }

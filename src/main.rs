@@ -11,7 +11,7 @@ mod graphql;
 use std::fs;
 use clap::{AppSettings, Clap};
 use serde::{Deserialize};
-use figment::{Figment, providers::{Serialized}};
+use figment::{Figment, providers::{Serialized, Format, Toml}};
 use fern::colors::{Color, ColoredLevelConfig};
 use rocket::http::Status;
 use rocket::{response::content, State};
@@ -126,9 +126,26 @@ async fn run_migrations(rocket: rocket::Rocket<rocket::Build>) -> rocket::Rocket
 
 #[rocket::main]
 async fn main() {
+    let proj_dirs: Option<directories::ProjectDirs> = directories::ProjectDirs::from("tv", "Meiti",  "Meiti Server");
+
     let opts: Opts = Opts::parse();
 
-    let figment = Figment::from(Serialized::defaults(config::Config::default()))
+    let mut config_file_path: std::path::PathBuf = std::path::PathBuf::from(proj_dirs.unwrap().config_dir());
+    config_file_path.push("meiti.toml");
+
+    // If we don't have an existing config file, just write the defaults to it
+    if !config_file_path.as_path().exists() {
+        fs::create_dir_all(&config_file_path).expect("Unable to create configuration directory");
+
+        let mut config_file_dir = config_file_path.clone();
+        config_file_dir.pop();
+
+        let serialized_defaults = toml::to_string(&config::Config::default()).expect("Unable to serialize default configuration");
+        fs::write(&config_file_path, serialized_defaults).expect("Unable to write file");
+        log::info!("Wrote default configuration to {:?}", &config_file_path)
+    }
+
+    let figment = Figment::from(Toml::file(config_file_path))
         .merge(Serialized::defaults(opts));
 
     let config: config::Config = figment.extract::<config::Config>().expect("The provided configuration is invalid");
