@@ -8,7 +8,7 @@ enum Episode {
 }
 
 #[derive(GraphQLObject)]
-#[graphql(description="A humanoid creature in the Star Wars universe")]
+#[graphql(description = "A humanoid creature in the Star Wars universe")]
 struct Human {
     id: String,
     name: String,
@@ -30,4 +30,9 @@ impl Query {
 
 // A root schema consists of a query and a mutation.
 // Request queries can be executed against a RootNode.
-pub type Schema = juniper::RootNode<'static, Query, EmptyMutation<crate::MeitiDb>, EmptySubscription<crate::MeitiDb>>;
+pub type Schema = juniper::RootNode<
+    'static,
+    Query,
+    EmptyMutation<crate::MeitiDb>,
+    EmptySubscription<crate::MeitiDb>,
+>;

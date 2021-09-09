@@ -1,14 +1,14 @@
 use crate::config;
 
-use std::fs;
-use std::io;
-use std::path::{PathBuf};
+use libloading::{Error, Library, Symbol};
+use meiti_common::Plugin;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use semver::Version;
+use std::fs;
+use std::io;
+use std::path::PathBuf;
 use url::Url;
-use libloading::{Library, Symbol, Error};
-use meiti_common::Plugin;
 
 #[derive(Serialize, Deserialize)]
 pub struct PluginManifest {
@@ -20,7 +20,7 @@ pub struct PluginManifest {
     homepage: Url,
     license: String,
     source: Url,
-    entry: Option<String>
+    entry: Option<String>,
 }
 
 pub struct LoadedPlugin {
@@ -33,7 +33,7 @@ pub struct LoadedPlugin {
     license: String,
     source: Url,
     resources: PathBuf,
-    library: Option<Box<dyn Plugin>>
+    library: Option<Box<dyn Plugin>>,
 }
 
 pub struct PluginManager {
@@ -49,19 +49,24 @@ impl PluginManager {
         }
     }
 
-    fn get_plugin_directories(&mut self, config: &config::Config) -> Result<Vec<PathBuf>, io::Error> {
+    fn get_plugin_directories(
+        &mut self,
+        config: &config::Config,
+    ) -> Result<Vec<PathBuf>, io::Error> {
         return Ok(fs::read_dir(&config.plugins_file_path)?
-                    .into_iter()
-                    .map(|r| r.unwrap().path())
-                    .filter(|r| r.is_dir())
-                    .collect());
+            .into_iter()
+            .map(|r| r.unwrap().path())
+            .filter(|r| r.is_dir())
+            .collect());
     }
 
-    pub unsafe fn load_all_plugins(&mut self, config: &config::Config) -> Result<(), Error>  {
-        let plugin_directories = self.get_plugin_directories(&config).expect("Failed to get plugin directories");
+    pub unsafe fn load_all_plugins(&mut self, config: &config::Config) -> Result<(), Error> {
+        let plugin_directories = self
+            .get_plugin_directories(&config)
+            .expect("Failed to get plugin directories");
 
         for path in plugin_directories {
-            info!("Loading plugin from {:?}", path);
+            tracing::info!("Loading plugin from {:?}", path);
             self.load_plugin(path)?;
         }
 
@@ -74,10 +79,12 @@ impl PluginManager {
         let mut manifest_filename = filename.clone();
         manifest_filename.push("manifest.json");
 
-        let manifest_file = fs::File::open(manifest_filename.as_path()).expect("Failed to open plugin manifest");
+        let manifest_file =
+            fs::File::open(manifest_filename.as_path()).expect("Failed to open plugin manifest");
         let reader = io::BufReader::new(manifest_file);
 
-        let manifest: PluginManifest = serde_json::from_reader(reader).expect("Invalid manifest format");
+        let manifest: PluginManifest =
+            serde_json::from_reader(reader).expect("Invalid manifest format");
 
         let plugin: Option<Box<dyn Plugin>> = None;
 
@@ -118,10 +125,10 @@ impl PluginManager {
             license: manifest.license,
             source: manifest.source,
             resources: resources_dir,
-            library: plugin
+            library: plugin,
         };
 
-        log::info!("Loaded {} plugin", loaded_plugin_info.name);
+        tracing::info!("Loaded {} plugin", loaded_plugin_info.name);
 
         self.plugins.push(loaded_plugin_info);
 
@@ -129,11 +136,11 @@ impl PluginManager {
     }
 
     pub fn unload(&mut self) {
-        log::info!("Unloading plugins");
+        tracing::info!("Unloading plugins");
 
         for plugin in self.plugins.drain(..) {
             if plugin.library.is_some() {
-                log::info!("Running unload hooks for plugin {}", plugin.name);
+                tracing::info!("Running unload hooks for plugin {}", plugin.name);
                 plugin.library.unwrap().on_plugin_unload();
             }
         }
@@ -144,7 +151,11 @@ impl PluginManager {
     }
 
     pub fn get_web_client_resources(&self) -> &std::path::PathBuf {
-        let web_plugin: Option<&LoadedPlugin> = self.plugins.iter().filter(|plugin| plugin.scope == "web").nth(0);
+        let web_plugin: Option<&LoadedPlugin> = self
+            .plugins
+            .iter()
+            .filter(|plugin| plugin.scope == "web")
+            .nth(0);
 
         let web_directory = &web_plugin.expect("No web client plugin found").resources;
 

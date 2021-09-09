@@ -20,7 +20,10 @@ diesel_migrations = "1.4.0"
 rocket_sync_db_pools = { version = "0.1.0-rc.1", features = ["diesel_sqlite_pool"] }
 
 # Logging
-log = "0.4.14"
+tracing = "0.1.26"
+tracing-unwrap = "0.9"
+tracing-subscriber = { version = "0.2.20", features = ["fmt", "tracing-log", "chrono"] }
+# diesel-tracing = "0.1.5"
 fern = { version = "0.6.0", features = ["colored", "date-based"] }
 
 # Utilities
