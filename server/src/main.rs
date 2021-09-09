@@ -13,7 +13,6 @@ mod graphql;
 mod plugins;
 
 use clap::{AppSettings, Clap};
-use fern::colors::{Color, ColoredLevelConfig};
 use figment::{
     providers::{Format, Serialized, Toml},
     Figment,
@@ -41,47 +40,6 @@ struct Opts {
     #[clap(short, long)]
     #[serde(skip_serializing_if = "Option::is_none")]
     port: Option<u16>,
-}
-
-fn setup_logger(config: &config::Config) -> Result<(), fern::InitError> {
-    
-    let colors_level = ColoredLevelConfig::new()
-        .error(Color::Red)
-        .warn(Color::Yellow)
-        .info(Color::Blue)
-        .debug(Color::White)
-        .trace(Color::Magenta);
-
-    fern::Dispatch::new()
-        .chain(
-            fern::Dispatch::new()
-                .format(move |out, message, record| {
-                    out.finish(format_args!(
-                        "[{}][{}] {}",
-                        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                        colors_level.color(record.level()),
-                        message
-                    ))
-                })
-                .chain(std::io::stdout()),
-        )
-        .chain(
-            fern::Dispatch::new()
-                .format(move |out, message, record| {
-                    out.finish(format_args!(
-                        "[{}][{}] {}",
-                        chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                        record.level(),
-                        message
-                    ))
-                })
-                .chain(fern::DateBased::new(
-                    config.log_file_path.join("meiti.server."),
-                    "%Y-%m-%d.log",
-                )),
-        )
-        .apply()?;
-    Ok(())
 }
 
 fn ensure_config_dirs(config: &config::Config) -> std::io::Result<()> {
@@ -183,8 +141,6 @@ async fn main() {
 
     // Ensure the directories we need exist before going further.
     ensure_config_dirs(&config).expect("Unable to create required directories");
-
-    setup_logger(&config).expect("failed to initialize logging");
 
     tracing::info!("Meiti Media Server v{}", VERSION);
     tracing::info!("Using port {:?}", config.port);
